@@ -1,0 +1,118 @@
+- name: Provision 
+  hosts: localhost
+  become_user: root
+
+  vars:
+  - k3s_namespace: perf-mon
+
+  tasks:
+  - name: install helpful tools
+    ansible.builtin.apt:
+      pkg:
+      - curl
+
+  - name: Install Python packages
+    ansible.builtin.pip:
+      name: kubernetes
+      state: present
+
+  - name: Install K3s via curl
+    shell: curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.25.4+k3s1 INSTALL_K3S_SKIP_ENABLE=true K3S_AGENT_TOKEN=4tX0DUZ0uQknRtVUAKjt sh -
+    args:
+      executable: /bin/bash
+
+  - name: Get k3s version
+    ansible.builtin.command: k3s --version
+    register: k3s_version_output
+    changed_when: false
+    ignore_errors: true
+
+  - name: Print k3s version
+    ansible.builtin.debug:
+      msg: "{{ k3s_version_output.stdout_lines[0].split(' ')[2] }}"
+
+  - name: Install Helm chart
+    ansible.builtin.shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    args:
+      executable: /bin/bash
+  
+  - name: Ensure k3s systemd is in running state
+    service:
+      name: k3s
+      state: started
+    register: k3sDetails
+    until: k3sDetails.status.ActiveState == "active"
+    retries: 10
+    delay: 5
+
+  - name: Create directory .kube
+    when: ansible_user is defined
+    ansible.builtin.file:
+      path: ~{{ ansible_user }}/.kube
+      state: directory
+      owner: "{{ ansible_user }}"
+      mode: "u=rwx,g=rx,o="
+
+  - name: Copy config file to user home directory
+    when: ansible_user is defined
+    ansible.builtin.copy:
+      src: /etc/rancher/k3s/k3s.yaml
+      dest: ~{{ ansible_user }}/.kube/config
+      remote_src: true
+      owner: "{{ ansible_user }}"
+      mode: "u=rw,g=,o="
+
+  - name: Configure default KUBECONFIG for user
+    when: ansible_user is defined
+    ansible.builtin.lineinfile:
+      path: ~{{ ansible_user }}/.bashrc
+      regexp: 'export KUBECONFIG=~/.kube/config'
+      line: 'export KUBECONFIG=~/.kube/config # Added by k3s-ansible'
+      state: present
+
+  - name: Create our namespace in Kubernetes
+    kubernetes.core.k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      name: "{{ k3s_namespace }}"
+      api_version: v1
+      kind: Namespace
+      state: present
+
+  - name: Install Grafana CRDs
+    kubernetes.core.k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      state: present
+      src: "{{ item }}"
+    with_items:
+    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_podmonitors.yaml
+    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_probes.yaml
+    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_servicemonitors.yaml
+    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_grafanaagents.yaml
+    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_integrations.yaml
+    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_logsinstances.yaml
+    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_metricsinstances.yaml
+    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_podlogs.yaml
+    ignore_errors: true
+  
+  - name: Add grafana mimir to Helm chart
+    kubernetes.core.helm_repository:
+      name: grafana
+      repo_url: https://grafana.github.io/helm-charts
+
+  - name: Deploy Grafana mimir in Kubernetes
+    kubernetes.core.helm:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      name: mimir
+      namespace: "{{ k3s_namespace }}"
+      chart_ref: grafana/mimir-distributed
+      chart_version: 5.2.1
+
+  - name: Get pods
+    ansible.builtin.command: kubectl get pod
+    register: kubectl_pods
+    changed_when: false
+    ignore_errors: true
+
+  - name: Print pods
+    ansible.builtin.debug:
+      msg: "{{ kubectl_pods }}"
