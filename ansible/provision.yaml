@@ -106,6 +106,49 @@
       namespace: "{{ k3s_namespace }}"
       chart_ref: grafana/mimir-distributed
       chart_version: 5.2.1
+  
+  - name: Deploy Jetson Exporter in Kubernetes
+    kubernetes.core.k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      state: present
+      namespace: "{{ k3s_namespace }}"
+      definition: "{{ lookup('template', 'kubernetes/jetson-exporter.yaml') | from_yaml_all }}"
+
+
+  - name: Create ConfigMap for Grafana dashboard
+    kubernetes.core.k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      state: present
+      namespace: "{{ k3s_namespace }}"
+      definition: "{{ lookup('template', 'kubernetes/grafana-config-datasources.yaml.j2') | from_yaml_all }}"
+
+  - name: Deploy Grafana dashboard
+    kubernetes.core.k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      state: present
+      namespace: "{{ k3s_namespace }}"
+      definition: "{{ lookup('file', 'kubernetes/grafana.yaml') | from_yaml_all }}"
+
+  - name: Install Grafana operator
+    kubernetes.core.k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      state: present
+      namespace: "{{ k3s_namespace }}"
+      definition: "{{ lookup('template', 'kubernetes/grafana-operator.yaml.j2') | from_yaml_all }}"
+
+  - name: Install Grafana agent
+    kubernetes.core.k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      state: present
+      namespace: "{{ k3s_namespace }}"
+      definition: "{{ lookup('template', 'kubernetes/grafana-agent.yaml.j2') | from_yaml_all }}"
+
+  - name: Deploy Grafana operator scrapers
+    kubernetes.core.k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      state: present
+      namespace: "{{ k3s_namespace }}"
+      definition: "{{ lookup('template', 'kubernetes/grafana-operator-scrape.yaml.j2') | from_yaml_all }}"
 
   - name: Get pods
     ansible.builtin.command: kubectl get pod

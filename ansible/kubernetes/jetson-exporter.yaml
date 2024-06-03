@@ -1,0 +1,68 @@
+# externalTrafficPolicy and internalTrafficPolicy make the metrics
+# only available within the node
+apiVersion: v1
+kind: Service
+metadata:
+  name: wes-jetson-exporter
+spec:
+  selector:
+    app: wes-jetson-exporter
+  ports:
+    - name: http
+      protocol: TCP
+      port: 9101
+      targetPort: http
+  type: NodePort
+  externalTrafficPolicy: Local
+  internalTrafficPolicy: Local
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wes-jetson-exporter
+  labels:
+    app: wes-jetson-exporter
+spec:
+  selector:
+    matchLabels:
+      app: wes-jetson-exporter
+  template:
+    metadata:
+      labels:
+        app: wes-jetson-exporter
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: "arm64"
+        resource.gpu: "true"
+      priorityClassName: wes-high-priority
+      containers:
+        - image: waggle/jetson-exporter:1.0.0
+          name: jetson-exporter
+          command: ["/app/jetson-exporter"]
+          env:
+            - name: PORT
+              value: "9101"
+            - name: KUBENODE
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            requests:
+              cpu: 100m
+              memory: 50Mi
+            limits:
+              memory: 50Mi
+          ports:
+            - name: http
+              containerPort: 9101
+              hostPort: 9101
+          volumeMounts:
+            - name: sys-kernel-debug
+              mountPath: /sys/kernel/debug
+              mountPropagation: HostToContainer
+              readOnly: true
+      volumes:
+        # required for gpu information to be read
+        - name: sys-kernel-debug
+          hostPath:
+            path: /sys/kernel/debug
