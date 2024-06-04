@@ -91,21 +91,37 @@
       kind: Namespace
       state: present
 
-  - name: Install Grafana CRDs
-    k8s:
-      kubeconfig: /etc/rancher/k3s/k3s.yaml
-      state: present
-      src: "{{ item }}"
+  - name: Test 
+    debug: 
+      msg: "{{ lookup( 'url', 'https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_podmonitors.yaml') }}"
+
+  - name: Download Grafana CRDs
+    shell: wget -P /tmp/ 'https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/{{ item }}'; kubectl apply -f /tmp/{{ item }}
     with_items:
-    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_podmonitors.yaml
-    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_probes.yaml
-    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_servicemonitors.yaml
-    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_grafanaagents.yaml
-    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_integrations.yaml
-    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_logsinstances.yaml
-    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_metricsinstances.yaml
-    - https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_podlogs.yaml
-    ignore_errors: true
+    - monitoring.coreos.com_podmonitors.yaml  
+    - monitoring.coreos.com_probes.yaml
+    - monitoring.coreos.com_servicemonitors.yaml
+    - monitoring.grafana.com_grafanaagents.yaml
+    - monitoring.grafana.com_integrations.yaml
+    - monitoring.grafana.com_logsinstances.yaml
+    - monitoring.grafana.com_metricsinstances.yaml
+    - monitoring.grafana.com_podlogs.yaml
+
+  #- name: Install Grafana CRDs
+  #  k8s:
+  #    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  #    state: present
+  #    definition: "{{ lookup( 'url', 'https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_podmonitors.yaml' ) }}" 
+      #with_items:
+      #- lookup( 'url', 'https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_podmonitors.yaml') 
+      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_probes.yaml") | from_yaml }}"
+      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_servicemonitors.yaml") | from_yaml }}"
+      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_grafanaagents.yaml") | from_yaml }}"
+      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_integrations.yaml") | from_yaml }}"
+      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_logsinstances.yaml") | from_yaml }}"
+      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_metricsinstances.yaml") | from_yaml }}"
+      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_podlogs.yaml") | from_yaml }}"
+      #  ignore_errors: true
   
   - name: Add grafana mimir to Helm chart
     shell: "helm repo add grafana https://grafana.github.io/helm-charts"
