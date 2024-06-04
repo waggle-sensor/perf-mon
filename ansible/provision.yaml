@@ -7,17 +7,25 @@
     scrape_interval: 15s
     k3s_cluster_cidr: "10.31.0.0/16"
     k3s_service_cidr: "10.32.0.0/16"
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
 
   tasks:
   - name: install helpful tools
-    ansible.builtin.apt:
+    apt:
       pkg:
       - curl
+      - python3-pip
 
-  - name: Install Python packages
-    ansible.builtin.pip:
-      name: kubernetes
+  - name: Install Python Kubernetes package
+    pip:
+      name:
+      - kubernetes
+        # - pyhelm
       state: present
+
+  # This is all that worked
+  - name: Install Python OpenShift package
+    shell: pip install openshift
 
   - name: Install K3s via curl
     shell: curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.25.4+k3s1 INSTALL_K3S_SKIP_ENABLE=true K3S_AGENT_TOKEN=4tX0DUZ0uQknRtVUAKjt sh -
@@ -25,17 +33,17 @@
       executable: /bin/bash
 
   - name: Get k3s version
-    ansible.builtin.command: k3s --version
+    command: k3s --version
     register: k3s_version_output
     changed_when: false
     ignore_errors: true
 
   - name: Print k3s version
-    ansible.builtin.debug:
+    debug:
       msg: "{{ k3s_version_output.stdout_lines[0].split(' ')[2] }}"
 
   - name: Install Helm chart
-    ansible.builtin.shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
     args:
       executable: /bin/bash
   
@@ -50,7 +58,7 @@
 
   - name: Create directory .kube
     when: ansible_user is defined
-    ansible.builtin.file:
+    file:
       path: ~{{ ansible_user }}/.kube
       state: directory
       owner: "{{ ansible_user }}"
@@ -58,7 +66,7 @@
 
   - name: Copy config file to user home directory
     when: ansible_user is defined
-    ansible.builtin.copy:
+    copy:
       src: /etc/rancher/k3s/k3s.yaml
       dest: ~{{ ansible_user }}/.kube/config
       remote_src: true
@@ -67,14 +75,16 @@
 
   - name: Configure default KUBECONFIG for user
     when: ansible_user is defined
-    ansible.builtin.lineinfile:
-      path: ~{{ ansible_user }}/.bashrc
-      regexp: 'export KUBECONFIG=~/.kube/config'
-      line: 'export KUBECONFIG=~/.kube/config # Added by k3s-ansible'
-      state: present
+    #shell: "export KUBECONFIG=~/kube/config"
+    lineinfile:
+     path: ~{{ ansible_user }}/.bashrc
+     regexp: 'export KUBECONFIG=~/.kube/config'
+     line: 'export KUBECONFIG=~/.kube/config # Added by k3s-ansible'
+     state: present
 
   - name: Create our namespace in Kubernetes
-    kubernetes.core.k8s:
+    # shell: "kubectl create namespace {{ k3s_namespace }}"
+    k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
       name: "{{ k3s_namespace }}"
       api_version: v1
@@ -82,7 +92,7 @@
       state: present
 
   - name: Install Grafana CRDs
-    kubernetes.core.k8s:
+    k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
       state: present
       src: "{{ item }}"
@@ -98,20 +108,26 @@
     ignore_errors: true
   
   - name: Add grafana mimir to Helm chart
-    kubernetes.core.helm_repository:
-      name: grafana
-      repo_url: https://grafana.github.io/helm-charts
+    shell: "helm repo add grafana https://grafana.github.io/helm-charts"
+
+  - name: Update Helm Repos
+    shell: "helm repo update"
 
   - name: Deploy Grafana mimir in Kubernetes
-    kubernetes.core.helm:
-      kubeconfig: /etc/rancher/k3s/k3s.yaml
-      name: mimir
-      namespace: "{{ k3s_namespace }}"
-      chart_ref: grafana/mimir-distributed
-      chart_version: 5.2.1
+    shell: "helm -n {{ k3s_namespace }} install mimir grafana/mimir-distributed"
+    environment:
+      KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+
+    #helm:
+            # kubeconfig: /etc/rancher/k3s/k3s.yaml
+            #  name: mimir
+            #namespace: "{{ k3s_namespace }}"
+            #chart:
+            #ref: grafana/mimir-distributed
+            #version: 5.2.1
   
   - name: Deploy Jetson Exporter in Kubernetes
-    kubernetes.core.k8s:
+    k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
       state: present
       namespace: "{{ k3s_namespace }}"
@@ -119,46 +135,46 @@
 
 
   - name: Create ConfigMap for Grafana dashboard
-    kubernetes.core.k8s:
+    k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
       state: present
       namespace: "{{ k3s_namespace }}"
       definition: "{{ lookup('template', 'kubernetes/grafana-config-datasources.yaml.j2') | from_yaml_all }}"
 
   - name: Deploy Grafana dashboard
-    kubernetes.core.k8s:
+    k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
       state: present
       namespace: "{{ k3s_namespace }}"
       definition: "{{ lookup('file', 'kubernetes/grafana.yaml') | from_yaml_all }}"
 
   - name: Install Grafana operator
-    kubernetes.core.k8s:
+    k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
       state: present
       namespace: "{{ k3s_namespace }}"
       definition: "{{ lookup('template', 'kubernetes/grafana-operator.yaml.j2') | from_yaml_all }}"
 
   - name: Install Grafana agent
-    kubernetes.core.k8s:
+    k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
       state: present
       namespace: "{{ k3s_namespace }}"
       definition: "{{ lookup('template', 'kubernetes/grafana-agent.yaml.j2') | from_yaml_all }}"
 
   - name: Deploy Grafana operator scrapers
-    kubernetes.core.k8s:
+    k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
       state: present
       namespace: "{{ k3s_namespace }}"
       definition: "{{ lookup('template', 'kubernetes/grafana-operator-scrape.yaml.j2') | from_yaml_all }}"
 
   - name: Get pods
-    ansible.builtin.command: kubectl get pod
+    command: kubectl get pod
     register: kubectl_pods
     changed_when: false
     ignore_errors: true
 
   - name: Print pods
-    ansible.builtin.debug:
+    debug:
       msg: "{{ kubectl_pods }}"
