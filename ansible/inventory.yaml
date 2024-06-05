@@ -1,0 +1,9 @@
+---
+test_node:
+  hosts:
+    main:
+      ansible_host: "UPDATE"
+      ansible_user: waggle
+      ansible_become_pass: "UPDATE"
+      ansible_ssh_pass: "UPDATE"
+      # ansible_ssh_private_key_file: "UPDATE"
