@@ -1,6 +1,5 @@
 - name: Provision 
   hosts: test_node
-  # become_user: root
   become: true
   gather_facts: no
 
@@ -9,7 +8,7 @@
     scrape_interval: 15s
     k3s_cluster_cidr: "10.31.0.0/16"
     k3s_service_cidr: "10.32.0.0/16"
-    # ansible_python_interpreter: "{{ ansible_playbook_python }}"
+    mimir_url: "http://mimir-nginx.{{ k3s_namespace }}.svc:80/api/v1/push"
 
   tasks:
   - name: install helpful tools
@@ -18,16 +17,15 @@
       - curl
       - python3-pip
 
+  - name: Upgrade pip
+    shell: pip3 install -U pip
+
   - name: Install Python Kubernetes package
     pip:
       name:
       - kubernetes
-        # - pyhelm
+      - openshift
       state: present
-
-  # This is all that worked
-  - name: Install Python OpenShift package
-    shell: pip install openshift
 
   - name: Install K3s via curl
     shell: curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.25.4+k3s1 INSTALL_K3S_SKIP_ENABLE=true K3S_AGENT_TOKEN=4tX0DUZ0uQknRtVUAKjt sh -
@@ -77,7 +75,6 @@
 
   - name: Configure default KUBECONFIG for user
     when: ansible_user is defined
-    #shell: "export KUBECONFIG=~/kube/config"
     lineinfile:
      path: ~{{ ansible_user }}/.bashrc
      regexp: 'export KUBECONFIG=~/.kube/config'
@@ -85,17 +82,12 @@
      state: present
 
   - name: Create our namespace in Kubernetes
-    # shell: "kubectl create namespace {{ k3s_namespace }}"
     k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
       name: "{{ k3s_namespace }}"
       api_version: v1
       kind: Namespace
       state: present
-
-  - name: Test 
-    debug: 
-      msg: "{{ lookup( 'url', 'https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_podmonitors.yaml') }}"
 
   - name: Download Grafana CRDs
     shell: wget -P /tmp/ 'https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/{{ item }}'; kubectl apply -f /tmp/{{ item }}
@@ -108,25 +100,10 @@
     - monitoring.grafana.com_logsinstances.yaml
     - monitoring.grafana.com_metricsinstances.yaml
     - monitoring.grafana.com_podlogs.yaml
-
-  #- name: Install Grafana CRDs
-  #  k8s:
-  #    kubeconfig: /etc/rancher/k3s/k3s.yaml
-  #    state: present
-  #    definition: "{{ lookup( 'url', 'https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_podmonitors.yaml' ) }}" 
-      #with_items:
-      #- lookup( 'url', 'https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_podmonitors.yaml') 
-      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_probes.yaml") | from_yaml }}"
-      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.coreos.com_servicemonitors.yaml") | from_yaml }}"
-      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_grafanaagents.yaml") | from_yaml }}"
-      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_integrations.yaml") | from_yaml }}"
-      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_logsinstances.yaml") | from_yaml }}"
-      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_metricsinstances.yaml") | from_yaml }}"
-      #- "{{ lookup( "url", "https://raw.githubusercontent.com/grafana/agent/main/operations/agent-static-operator/crds/monitoring.grafana.com_podlogs.yaml") | from_yaml }}"
-      #  ignore_errors: true
   
   - name: Add grafana mimir to Helm chart
     shell: "helm repo add grafana https://grafana.github.io/helm-charts"
+    # times out but works
 
   - name: Update Helm Repos
     shell: "helm repo update"
@@ -135,14 +112,6 @@
     shell: "helm -n {{ k3s_namespace }} install mimir grafana/mimir-distributed"
     environment:
       KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
-
-    #helm:
-            # kubeconfig: /etc/rancher/k3s/k3s.yaml
-            #  name: mimir
-            #namespace: "{{ k3s_namespace }}"
-            #chart:
-            #ref: grafana/mimir-distributed
-            #version: 5.2.1
   
   - name: Deploy Jetson Exporter in Kubernetes
     k8s:
@@ -150,7 +119,6 @@
       state: present
       namespace: "{{ k3s_namespace }}"
       definition: "{{ lookup('template', 'kubernetes/jetson-exporter.yaml') | from_yaml_all }}"
-
 
   - name: Create ConfigMap for Grafana dashboard
     k8s:
