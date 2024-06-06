@@ -34,7 +34,6 @@ spec:
       nodeSelector:
         kubernetes.io/arch: "arm64"
         resource.gpu: "true"
-      priorityClassName: wes-high-priority
       containers:
         - image: waggle/jetson-exporter:1.0.0
           name: jetson-exporter

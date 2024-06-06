@@ -101,12 +101,25 @@
     - monitoring.grafana.com_metricsinstances.yaml
     - monitoring.grafana.com_podlogs.yaml
   
+  - name: Get Node Name
+    shell: "kubectl get node"
+    register: node_name
+
+  # required for jetson-exporter
+  - name: Label GPU
+    shell: "kubectl label nodes {{ node_name.stdout_lines[1].split(' ')[0] }} resource.gpu=true"
+
   - name: Add grafana mimir to Helm chart
     shell: "helm repo add grafana https://grafana.github.io/helm-charts"
-    # times out but works
+    timeout: 120
 
   - name: Update Helm Repos
     shell: "helm repo update"
+
+  - name: Ensure Grafana mimir isn't installed
+    shell: "helm -n {{ k3s_namespace }} uninstall --ignore-not-found mimir"
+    environment:
+      KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
 
   - name: Deploy Grafana mimir in Kubernetes
     shell: "helm -n {{ k3s_namespace }} install mimir grafana/mimir-distributed"
