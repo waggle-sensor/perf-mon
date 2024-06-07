@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: cpu-stress-core
+    app.kubernetes.io/name: cpu-stress-core
+  name: cpu-stress-core
+spec:
+  containers:
+  - args:
+    - --cpu
+    - "6"
+    - -l
+    - "50"
+    - --timeout
+    - "120"
+    command:
+    - stress-ng
+    image: waggle/waggle-stress:0.2.0
+    name: cpu-stress-core
+    resources:
+      limits:
+        memory: 100Mi
+      requests:
+        cpu: "2"
+        memory: 50Mi
