@@ -30,8 +30,8 @@ class ProgramSim:
 
             # wait until processes end
             for pid in pids:
-                os.waitid(pid)
+                os.waitid(os.P_PID, pid, os.WEXITED)
 
 
-if __name__ == "main":
+if __name__ == "__main__":
     ProgramSim(5, 10, 6, 80, 0.01, 0.01).simulate()
