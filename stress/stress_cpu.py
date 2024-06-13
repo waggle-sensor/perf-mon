@@ -1,4 +1,4 @@
-import os
+from subprocess import Popen
 
 class StressCPU:
     def __init__(self, num_cores, percentage, time):
@@ -10,5 +10,7 @@ class StressCPU:
         """
         Run stress-ng with the given parameters
         """
-        command = "stress-ng --cpu {} -l {} --timeout".format(self.num_cores, self.percentage, self.time)
-        os.system(command)
+        command = "stress-ng --cpu {} -l {} --timeout".format(self.num_cores, self.percentage, self.time).split(' ')
+
+        # return proc for waiting
+        return Popen(command).pid
