@@ -10,7 +10,7 @@ class StressCPU:
         """
         Run stress-ng with the given parameters
         """
-        command = "stress-ng --cpu {} -l {} --timeout".format(self.num_cores, self.percentage, self.time).split(' ')
+        command = "stress-ng --cpu {} -l {} --timeout {}".format(self.num_cores, self.percentage, self.time).split(' ')
 
         # return proc for waiting
         return Popen(command).pid
