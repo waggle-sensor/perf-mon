@@ -5,12 +5,19 @@ import os
 import sys
 import argparse
 
+"""
+Represents the resources used in a given program
+"""
 class Resource:
     def __init__(self, num_cores, max_stress, min_gpu_timeout, max_gpu_timeout):
         self.cpu_cores = random.randrange(num_cores)
         self.cpu_stress = random.randrange(max_stress)
         self.gpu_stress_timeout = random.random() * (max_gpu_timeout - min_gpu_timeout) + min_gpu_timeout
 
+"""
+Represents a program simulation that stresses resources at random amounts
+over a period of time
+"""
 class ProgramSim:
     def __init__(self, max_num_programs, max_seconds, num_cores, max_stress, max_gpu_timeout, min_gpu_timeout):
         random.seed()
@@ -20,6 +27,10 @@ class ProgramSim:
         self.resources = [Resource(num_cores, max_stress, max_gpu_timeout, min_gpu_timeout) for _ in range(self.number)]
 
     def simulate(self):
+        """
+        Simulates the program by running each step at the given stress levels
+        for a given amount of time
+        """
         for i in range(self.number):
             r = self.resources[i]
             t = self.times[i]
@@ -72,6 +83,7 @@ if __name__ == "__main__":
         help="Maximum CPU stress level"
     )
 
+    # min gpu timeout
     parser.add_argument(
         "--min-gpu-timeout",
         default=0.1,
@@ -79,6 +91,7 @@ if __name__ == "__main__":
         help="Minimum GPU timeout"
     )
 
+    # max gpu timeout
     parser.add_argument(
         "--max-gpu-timeout",
         default=0.1,
@@ -87,7 +100,6 @@ if __name__ == "__main__":
     )
     
     args = parser.parse_args()
-
     if args.min_gpu_timeout > args.max_gpu_timeout:
         print("MIN GPU timeout must be smaller than MAX GPU timeout")
         sys.exit(os.EX_DATAERR)
