@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: gpu-stress-core
+    app.kubernetes.io/name: gpu-stress-core
+  name: gpu-stress-core
+spec:
+  containers:
+  - args:
+    - -r 
+    - "36000"
+    image: waggle/gpu-stress-test:latest
+    name: gpu-stress-core
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        cpu: 1000m
+        memory: 1Gi
