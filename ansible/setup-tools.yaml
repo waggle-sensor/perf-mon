@@ -1,0 +1,26 @@
+---
+- name: Setup Tools 
+  hosts: test_node
+  become: true
+  gather_facts: no
+
+  vars:
+    k3s_namespace: perf-mon
+    scrape_interval: 15s
+    k3s_cluster_cidr: "10.31.0.0/16"
+    k3s_service_cidr: "10.32.0.0/16"
+    mimir_url: "http://mimir-nginx.{{ k3s_namespace }}.svc:80/api/v1/push"
+
+  tasks:
+  - name: install helpful tools
+    ansible.builtin.apt:
+      update_cache: yes
+      pkg:
+      - curl
+      - python3-pip
+
+  - name: Upgrade pip
+    shell: pip3 install -U pip
+
+  - name: Install Python packages
+    shell: pip3 install openshift pyyaml kubernetes --user

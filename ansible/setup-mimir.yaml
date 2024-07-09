@@ -1,0 +1,31 @@
+---
+- name: Setup Mimir 
+  hosts: test_node
+  become: true
+  gather_facts: no
+
+  tasks:
+  - name: Install Helm chart
+    shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    args:
+      executable: /bin/bash
+
+  - name: Add grafana mimir to Helm chart
+    shell: "helm repo add grafana https://grafana.github.io/helm-charts"
+    timeout: 120
+
+  - name: Update Helm Repos
+    shell: "helm repo update"
+
+  - name: Ensure Grafana mimir isn't installed
+    shell: "helm -n {{ k3s_namespace }} uninstall --ignore-not-found mimir"
+    environment:
+      KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+
+  - name: Deploy Grafana mimir in Kubernetes
+    shell: "helm -n {{ k3s_namespace }} install mimir grafana/mimir-distributed"
+    environment:
+      KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+
+  - name: Expose mimir-nginx to network
+    shell: "kubectl -n {{ k3s_namespace }} expose deployment mimir-nginx --type=LoadBalancer --name=mimir-nginx-balancer"
