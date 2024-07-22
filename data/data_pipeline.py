@@ -4,10 +4,20 @@ import csv
 
 class Prometheus:
     def __init__(self):
-        self.PROMETHEUS = "http://localhost:8080"
+        self.PROMETHEUS = "http://10.31.81.129:8080"
         self.BASE_URL = "/prometheus/api/v1"
-        self.name_filters = ["gpu"]
-        self.container_filters = ["*"]
+        #self.name_filters = ["container_cpu_usage_seconds_total"]#, "tegra_cpu_util_percentage", "tegra_wattage_current_milliwatts"]
+        #self.container_filters = ["stressme"]
+        self.filters = [
+            ("container_cpu_usage_seconds_total", {"container": "stressme"}),
+            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "1"}),
+            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "2"}),
+            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "3"}),
+            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "4"}),
+            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "5"}),
+            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "6"}),
+            ("tegra_wattage_current_milliwatts", {"pod": "wes-jetson-exporter", "sensor": "vdd_in"})
+        ]
 
     def query(self, endpoint, params):
         response = requests.get(
@@ -26,26 +36,36 @@ class Prometheus:
         names = self.query(endpoint, {})['data']
 
         # union over all filters
-        filtered_names = set()
-        for filter in self.name_filters:
-            filtered = self.apply_filter(names, filter)
+        filtered_names = list()
+        for (name_filter, filter) in self.filters:
+            filtered = self.apply_filter(names, name_filter)
 
             for name in filtered:
-                filtered_names.add(name)
+                filtered_names.append((name, filter))
 
-        return list(filtered_names)
+        return filtered_names
     
-    def get_values(self, name, time, start):
+    def get_values(self, name, filters, time, start):
         endpoint = "/query"
         params = { "query": "{}[{}]".format(name, time) }
-        values = self.query(endpoint, params)['data']['result'][0]['values'] # container level filtering can be done here
-        return values
+
+        for metric in self.query(endpoint, params)['data']['result']:
+            match = True
+            for key in filters.keys():
+                if not filters[key] in metric['metric'][key]:
+                    match = False
+            
+            if match:
+                return metric['values']
 
     def get_all_values(self, names, time, start):
         values = []
+        pretty_values = [] 
+        pretty_values.append(['time'])
 
-        for name in names:
-            values.append(self.get_values(name, time, start))
+        for (name, filters) in names:
+            values.append(self.get_values(name, filters, time, start))
+            pretty_values[0].append(name)
 
         # values looks like this
         # (time1, m1) (time2, m1) (time3, m3) ...
@@ -57,10 +77,7 @@ class Prometheus:
         # time1, m1, m2, m3 ...
         # time2, m1, m2, m3 ...
 
-        # essentially this operation is an augmented matrix transformation
-
-        pretty_values = [] 
-        pretty_values.append(['time'] + names)
+        # essentially this operation is an augmented matrix transpose        
         
         for i in range(len(values[0])):
             t = [values[0][i][0]]
@@ -79,4 +96,4 @@ class Prometheus:
 if __name__ == "__main__":
     prom = Prometheus()
     names = prom.get_names()
-    prom.construct_csv(names, '5m', 0)
+    prom.construct_csv(names, '12h', 0)
