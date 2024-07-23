@@ -53,7 +53,7 @@
       regexp: 'export KUBECONFIG=~/.kube/config'
       line: 'export KUBECONFIG=~/.kube/config # Added by k3s-ansible'
       state: present
-
+      
   - name: Create our namespace in Kubernetes
     k8s:
       kubeconfig: /etc/rancher/k3s/k3s.yaml
