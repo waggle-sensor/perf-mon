@@ -1,0 +1,32 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    instance: primary
+  name: wes-jetson-monitor
+  namespace: {{ k3s_namespace }}
+spec:
+  podMetricsEndpoints:
+  - honorLabels: true
+    interval: 5s
+    metricRelabelings:
+    - action: keep
+      regex: ^tegra_(.*)
+      sourceLabels:
+      - __name__
+    targetPort: 9101
+    path: /metrics
+    relabelings:
+    - sourceLabels:
+      - __metrics_path__
+      targetLabel: metrics_path
+    - sourceLabels:
+      - __meta_kubernetes_pod_node_name
+      targetLabel: hostname
+    - action: replace
+      targetLabel: job
+      replacement: integrations/kubernetes/pod
+    scheme: http
+  selector:
+    matchLabels:
+      app: wes-jetson-exporter

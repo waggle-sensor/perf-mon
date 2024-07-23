@@ -1,0 +1,63 @@
+---
+- name: Setup k3s 
+  hosts: test_node
+  become: true
+  gather_facts: no
+
+  tasks:  
+  - name: Install K3s via curl
+    shell: curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.25.4+k3s1 INSTALL_K3S_SKIP_ENABLE=true K3S_AGENT_TOKEN=4tX0DUZ0uQknRtVUAKjt sh -
+    args:
+      executable: /bin/bash
+
+  - name: Get k3s version
+    command: k3s --version
+    register: k3s_version_output
+    changed_when: false
+    ignore_errors: true
+
+  - name: Print k3s version
+    debug:
+      msg: "{{ k3s_version_output.stdout_lines[0].split(' ')[2] }}"
+
+  - name: Ensure k3s systemd is in running state
+    service:
+      name: k3s
+      state: started
+    register: k3sDetails
+    until: k3sDetails.status.ActiveState == "active"
+    retries: 10
+    delay: 5
+
+  - name: Create directory .kube
+    when: ansible_user is defined
+    file:
+      path: ~{{ ansible_user }}/.kube
+      state: directory
+      owner: "{{ ansible_user }}"
+      mode: "u=rwx,g=rx,o="
+
+  - name: Copy config file to user home directory
+    when: ansible_user is defined
+    copy:
+      src: /etc/rancher/k3s/k3s.yaml
+      dest: ~{{ ansible_user }}/.kube/config
+      remote_src: true
+      owner: "{{ ansible_user }}"
+      mode: "u=rw,g=,o="
+
+  - name: Configure default KUBECONFIG for user
+    when: ansible_user is defined
+    lineinfile:
+      path: ~{{ ansible_user }}/.bashrc
+      regexp: 'export KUBECONFIG=~/.kube/config'
+      line: 'export KUBECONFIG=~/.kube/config # Added by k3s-ansible'
+      state: present
+      
+  - name: Create our namespace in Kubernetes
+    k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+      name: "{{ k3s_namespace }}"
+      api_version: v1
+      kind: Namespace
+      state: present
