@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: playback-server
+spec:
+  selector:
+    app: playback-server
+  ports:
+    - name: stream
+      protocol: TCP
+      port: 8090
+      targetPort: 8090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: playback-server
+spec:
+  selector:
+    matchLabels:
+      app: playback-server
+  template:
+    metadata:
+      labels:
+        app: playback-server
+    spec:
+      containers:
+        - image: waggle/wes-playback-server:0.1.0
+          imagePullPolicy: IfNotPresent
+          name: playback-server
+          args:
+          - -data
+          - "/data"
+          ports:
+            - containerPort: 8090
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+      - name: data
+        hostPath:
+          path: /home/waggle/data
+          type: DirectoryOrCreate
