@@ -4,13 +4,14 @@
 test_node:
   hosts:
     main:
-      ansible_host: "UPDATE"
-      ansible_user: "UPDATE"
-      ansible_become_pass: "UPDATE"
-      ansible_ssh_pass: "UPDATE"
+      ansible_host: "UPDATEME"
+      ansible_user: "UPDATEME"
+      ansible_become_pass: "UPDATEME"
+      ansible_ssh_pass: "UPDATEME"
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
   vars:
     k3s_namespace: perf-mon
     scrape_interval: 15s
     k3s_cluster_cidr: "10.31.0.0/16"
     k3s_service_cidr: "10.32.0.0/16"
-    mimir_url: "UPDATE:80/api/v1/push"
+    mimir_url: "http://UPDATEME:80/api/v1/push"
