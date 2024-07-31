@@ -39,7 +39,7 @@ sudo ansible-playbook -i inventory-metrics-server.yaml ansible.yaml
 ```
 
 ### Edge Device Setup 
-We flashed the Jetson devices using the SD card method.
+We flashed the Jetson devices using the SD card method (For example, see [here](https://developer.nvidia.com/embedded/jetpack-sdk-441-archive)).
 After this, we ran
 
 ```
