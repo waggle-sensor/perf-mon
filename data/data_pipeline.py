@@ -56,7 +56,11 @@ class Prometheus:
         pretty_values.append(['time'])
 
         for (name, filters) in names:
-            values.append(self.get_values(name, filters, time))
+            v = self.get_values(name, filters, time)
+            if v is None or len(v) < 1:
+                print(f'no data found {name}, {filters}')
+                continue
+            values.append(v)
             pretty_values[0].append(name)
 
         # values looks like this
@@ -70,11 +74,13 @@ class Prometheus:
         # time2, m1, m2, m3 ...
 
         # essentially this operation is an augmented matrix transpose        
-        
-        for i in range(len(values[0])):
-            t = [values[0][i][0]]
-            vs = [values[j][i][1] for j in range(len(names))]
-            pretty_values.append(t + vs)     
+        if len(values) < 1:
+            print("no data found")
+        else:
+            for i in range(len(values[0])):
+                t = [values[0][i][0]]
+                vs = [values[j][i][1] for j in range(len(names))]
+                pretty_values.append(t + vs)     
 
         return pretty_values
 
@@ -103,4 +109,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     prom = Prometheus(args)
     names = prom.get_names()
-    prom.construct_csv(names, args.t, 0)
+    prom.construct_csv(names, args.t)
