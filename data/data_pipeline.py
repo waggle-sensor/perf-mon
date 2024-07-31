@@ -1,23 +1,15 @@
 import requests 
 import re
 import csv
+import argparse
+import json
 
 class Prometheus:
-    def __init__(self):
-        self.PROMETHEUS = "http://10.31.81.129:8080"
+    def __init__(self, args):
+        self.PROMETHEUS = args.prometheus_url
         self.BASE_URL = "/prometheus/api/v1"
-        #self.name_filters = ["container_cpu_usage_seconds_total"]#, "tegra_cpu_util_percentage", "tegra_wattage_current_milliwatts"]
-        #self.container_filters = ["stressme"]
-        self.filters = [
-            ("container_cpu_usage_seconds_total", {"container": "stressme"}),
-            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "1"}),
-            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "2"}),
-            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "3"}),
-            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "4"}),
-            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "5"}),
-            ("tegra_cpu_util_percentage", {"pod": "wes-jetson-exporter", "cpu": "6"}),
-            ("tegra_wattage_current_milliwatts", {"pod": "wes-jetson-exporter", "sensor": "vdd_in"})
-        ]
+        with open(args.filter_file, "r") as file:
+            self.filters = json.load(file)
 
     def query(self, endpoint, params):
         response = requests.get(
@@ -45,7 +37,7 @@ class Prometheus:
 
         return filtered_names
     
-    def get_values(self, name, filters, time, start):
+    def get_values(self, name, filters, time):
         endpoint = "/query"
         params = { "query": "{}[{}]".format(name, time) }
 
@@ -58,13 +50,13 @@ class Prometheus:
             if match:
                 return metric['values']
 
-    def get_all_values(self, names, time, start):
+    def get_all_values(self, names, time):
         values = []
         pretty_values = [] 
         pretty_values.append(['time'])
 
         for (name, filters) in names:
-            values.append(self.get_values(name, filters, time, start))
+            values.append(self.get_values(name, filters, time))
             pretty_values[0].append(name)
 
         # values looks like this
@@ -94,6 +86,15 @@ class Prometheus:
         
 
 if __name__ == "__main__":
-    prom = Prometheus()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--prometheus-url",
+                        type=str,
+                        required=True,
+                        help="Sets the prometheus url to use")
+    parser.add_argument("--filter-file",
+                        type=str,
+                        required=True,
+                        help="The path of the filter file to use")
+    prom = Prometheus(parser.parse_args())
     names = prom.get_names()
     prom.construct_csv(names, '12h', 0)

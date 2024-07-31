@@ -1,0 +1,57 @@
+[
+    [
+      "container_cpu_usage_seconds_total",
+      {
+        "container": "stressme"
+      }
+    ],
+    [
+      "tegra_cpu_util_percentage",
+      {
+        "pod": "wes-jetson-exporter",
+        "cpu": "1"
+      }
+    ],
+    [
+      "tegra_cpu_util_percentage",
+      {
+        "pod": "wes-jetson-exporter",
+        "cpu": "2"
+      }
+    ],
+    [
+      "tegra_cpu_util_percentage",
+      {
+        "pod": "wes-jetson-exporter",
+        "cpu": "3"
+      }
+    ],
+    [
+      "tegra_cpu_util_percentage",
+      {
+        "pod": "wes-jetson-exporter",
+        "cpu": "4"
+      }
+    ],
+    [
+      "tegra_cpu_util_percentage",
+      {
+        "pod": "wes-jetson-exporter",
+        "cpu": "5"
+      }
+    ],
+    [
+      "tegra_cpu_util_percentage",
+      {
+        "pod": "wes-jetson-exporter",
+        "cpu": "6"
+      }
+    ],
+    [
+      "tegra_wattage_current_milliwatts",
+      {
+        "pod": "wes-jetson-exporter",
+        "sensor": "vdd_in"
+      }
+    ]
+  ]

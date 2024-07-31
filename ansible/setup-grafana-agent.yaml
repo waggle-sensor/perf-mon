@@ -25,37 +25,12 @@
   - name: Label GPU
     shell: "kubectl label nodes {{ node_name.stdout_lines[1].split(' ')[0] }} resource.gpu=true"
 
-  - name: Deploy Jetson Exporter in Kubernetes
-    k8s:
-      kubeconfig: /etc/rancher/k3s/k3s.yaml
-      state: present
-      namespace: "{{ k3s_namespace }}"
-      definition: "{{ lookup('template', 'kubernetes/jetson-exporter.yaml') | from_yaml_all }}"
-
-  - name: Deploy Jetson Exporter Pod Monitor
-    k8s:
-      kubeconfig: /etc/rancher/k3s/k3s.yaml
-      state: present
-      namespace: "{{ k3s_namespace }}"
-      definition: "{{ lookup('template', 'kubernetes/pod-monitor.yaml') | from_yaml_all }}"
-
-  - name: Install Grafana operator
-    k8s:
-      kubeconfig: /etc/rancher/k3s/k3s.yaml
-      state: present
-      namespace: "{{ k3s_namespace }}"
-      definition: "{{ lookup('template', 'kubernetes/grafana-operator.yaml.j2') | from_yaml_all }}"
-
-  - name: Install Grafana agent
-    k8s:
-      kubeconfig: /etc/rancher/k3s/k3s.yaml
-      state: present
-      namespace: "{{ k3s_namespace }}"
-      definition: "{{ lookup('template', 'kubernetes/grafana-agent.yaml.j2') | from_yaml_all }}"
-
-  - name: Deploy Grafana operator scrapers
-    k8s:
-      kubeconfig: /etc/rancher/k3s/k3s.yaml
-      state: present
-      namespace: "{{ k3s_namespace }}"
-      definition: "{{ lookup('template', 'kubernetes/grafana-operator-scrape.yaml.j2') | from_yaml_all }}"
+  - name: Deploy Grafana Agent objects
+    shell: echo '{{ lookup("template", "kubernetes/{{ item }}") }}' > /tmp/{{ item }}; kubectl apply -n {{ k3s_namespace }} -f /tmp/{{ item }} --validate=false
+    with_items:
+    - jetson-exporter.yaml
+    - pod-monitor.yaml
+    - grafana-operator.yaml.j2
+    - grafana-agent.yaml.j2
+    - grafana-operator-scrape.yaml.j2
+  
