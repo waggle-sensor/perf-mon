@@ -78,8 +78,8 @@ class Prometheus:
 
         return pretty_values
 
-    def construct_csv(self, names, time, start):
-        values = self.get_all_values(names, time, start)
+    def construct_csv(self, names, time):
+        values = self.get_all_values(names, time)
         with open('perf-data.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',')
             writer.writerows(values)
@@ -95,6 +95,12 @@ if __name__ == "__main__":
                         type=str,
                         required=True,
                         help="The path of the filter file to use")
-    prom = Prometheus(parser.parse_args())
+    parser.add_argument("-t",
+                        type=str,
+                        default="1h",
+                        help="The time duration to get")
+    
+    args = parser.parse_args()
+    prom = Prometheus(args)
     names = prom.get_names()
-    prom.construct_csv(names, '12h', 0)
+    prom.construct_csv(names, args.t, 0)

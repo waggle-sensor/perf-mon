@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: solar-irradiance 
+spec:
+  runtimeClassName: nvidia
+  containers:
+  - name: solar-irradiance
+    image: 10.31.81.1:5000/seonghapark/solar-irradiance:0.1.0
+    env:
+      WAGGLE_GPS_SERVER: wes-gps-server.default.svc.cluster.local

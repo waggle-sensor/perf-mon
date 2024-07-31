@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: water-depth-estimator 
+spec:
+  runtimeClassName: nvidia
+  containers:
+  - name: water-depth-estimator
+    image: 10.31.81.1:5000/seonghapark/water-depth-estimator:0.0.3
+    args:
+    - -stream
+    - http://playback-server:8090/bottom/image.jpg
+    - -cropping
+    - 250 850 400 600
+    - -mapping
+    - 545,25 535,30 525,35 516,40 504,45 495,50 483,55 474,60 463,65 451,70 440,75 427,80 415,85 402,90 391,95

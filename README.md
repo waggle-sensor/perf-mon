@@ -51,10 +51,10 @@ sudo ansible-playbook -i inventory-edge-device.yaml ansible.yaml
 After setting up the devices, it is time to start gathering data. For our experiments, we used a combination of [stressme](https://github.com/waggle-sensor/stressme/tree/main) and [SAGE applications](https://portal.sagecontinuum.org/apps/explore). 
 
 ## Using the Data Pipeline
-Using the data pipeline, is fairly simple. All you need to do is set the Prometheus ip address and the set of filters. The filter language is described below. To run the data pipeline, you use the command
+Using the data pipeline, is fairly simple. All you need to do is set the Prometheus ip address and the set of filters. The filter language is described below. To run the data pipeline (on your local machine), you use the command
 
 ```
-python3 data_pipeline --prometheus-url prometheus-url --filter-file filters.json
+python3 data_pipeline.py --prometheus-url http://prometheus-ip:port --filter-file filters.json
 ```
 
 ### The Filter Schema
