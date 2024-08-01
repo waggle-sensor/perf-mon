@@ -44,8 +44,12 @@ class Prometheus:
         for metric in self.query(endpoint, params)['data']['result']:
             match = True
             for key in filters.keys():
-                if not filters[key] in metric['metric'][key]:
+                if key not in metric['metric']:
+                    print(f'Query failed: {key} not exist in {metric['metric']}')
                     match = False
+                else:
+                    if not filters[key] in metric['metric'][key]:
+                        match = False
             
             if match:
                 return metric['values']
@@ -79,7 +83,7 @@ class Prometheus:
         else:
             for i in range(len(values[0])):
                 t = [values[0][i][0]]
-                vs = [values[j][i][1] for j in range(len(names))]
+                vs = [values[j][i][1] for j in range(len(values))]
                 pretty_values.append(t + vs)     
 
         return pretty_values

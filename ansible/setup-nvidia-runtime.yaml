@@ -5,8 +5,10 @@
   gather_facts: no
 
   tasks:
-  - name: Install nvidia container toolkit
-    shell: curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | tee /etc/apt/sources.list.d/nvidia-container-toolkit.list; apt-get update; apt-get install -y nvidia-container-toolkit
+  # NOTE: The Jetson SDcard flashing method comes with nvidia-container-toolkit
+  #       so we skip this portion. If the package does not exist, this needs to be run
+  # - name: Install nvidia container toolkit
+  #   shell: curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | tee /etc/apt/sources.list.d/nvidia-container-toolkit.list; apt-get update; apt-get install -y nvidia-container-toolkit
 
   - name: Set nvidia runtime 
     shell: echo '{{ lookup("template", "kubernetes/{{ item }}") }}' > /tmp/{{ item }}; kubectl apply -n {{ k3s_namespace }} -f /tmp/{{ item }} --validate=false

@@ -14,4 +14,4 @@ test_node:
     scrape_interval: 15s
     k3s_cluster_cidr: "10.31.0.0/16"
     k3s_service_cidr: "10.32.0.0/16"
-    mimir_url: "http://UPDATEME:80/api/v1/push"
+    mimir_url: "http://UPDATEME:8080/api/v1/push"

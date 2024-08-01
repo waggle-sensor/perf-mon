@@ -43,7 +43,7 @@ We flashed the Jetson devices using the SD card method (For example, see [here](
 After this, we ran
 
 ```
-python3 create_ansible.py --enable-grafana-agent
+python3 create_ansible.py --enable-grafana-agent --enable-nvidia-runtime
 sudo ansible-playbook -i inventory-edge-device.yaml ansible.yaml
 ```
 
