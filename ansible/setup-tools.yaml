@@ -20,7 +20,7 @@
       - python3-pip
 
   - name: Upgrade pip
-    shell: pip3 install -U pip
+    shell: pip3 install --user -U pip || PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --user -U pip 
 
   - name: Install Python packages
-    shell: pip3 install openshift pyyaml kubernetes --user
+    shell: pip3 install --user openshift pyyaml kubernetes || PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --user openshift pyyaml kubernetes

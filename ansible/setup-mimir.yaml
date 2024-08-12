@@ -17,15 +17,22 @@
   - name: Update Helm Repos
     shell: "helm repo update"
 
-  - name: Ensure Grafana mimir isn't installed
-    shell: "helm -n {{ k3s_namespace }} uninstall --ignore-not-found mimir"
-    environment:
-      KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+  - name: Check if mimir exists
+    shell: helm -n {{ k3s_namespace }} list --selector name=mimir --no-headers --short | wc -l
+    register: is_mimir_exist
+
+  # NOTE: we don't delete existing mimir
+  # - name: Ensure Grafana mimir isn't installed
+  #   shell: "helm -n {{ k3s_namespace }} uninstall --ignore-not-found mimir"
+  #   environment:
+  #     KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
 
   - name: Deploy Grafana mimir in Kubernetes
+    when: is_mimir_exist == 0
     shell: "helm -n {{ k3s_namespace }} install mimir grafana/mimir-distributed"
     environment:
       KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
 
   - name: Expose mimir-nginx to network
     shell: "kubectl -n {{ k3s_namespace }} expose deployment mimir-nginx --type=LoadBalancer --name=mimir-nginx-balancer"
+    ignore_errors: true
